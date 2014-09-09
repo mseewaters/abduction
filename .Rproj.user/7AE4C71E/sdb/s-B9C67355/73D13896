@@ -1,0 +1,17 @@
+{
+    "contents" : "data <- read.csv(\"D:/0 Stern MSBA/0.2 Abduction/abduction2/Sample_data.csv\", stringsAsFactors=FALSE)\n\nnames.data <- c(\"Date\",\"Victim.Age\",\"Victim.Race\",\"Victim.Gender\",\"Harm\",\"Publicized\",\"Location\",\"Region\",\n                \"Relationship\",\"RSO\",\"Offender.Age\",\"Offender.Race\",\"Offender.Gender\",\"Rural.City\",\"Missing.Location\",\n                \"Recovery.Location\", \"Recovery\", \"Number.Victims\")\n\ncolnames(data) <- names.data\n\nsummary(data)\ndata$Victim.AgeGroup <- cut(data$Victim.Age, \n                         breaks=c(-0.5,5.5,10.5,Inf), \n                         labels=c('0-5','6-10','11-15'))\n\ntable(data$Victim.AgeGroup)\n",
+    "created" : 1410220720926.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "4193675776",
+    "id" : "73D13896",
+    "lastKnownWriteTime" : 1410224154,
+    "path" : "D:/0 Stern MSBA/0.2 Abduction/abduction2/test_models.R",
+    "project_path" : "test_models.R",
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "source_on_save" : false,
+    "type" : "r_source"
+}
