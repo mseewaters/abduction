@@ -66,7 +66,7 @@ table(data$Victim.AgeGroup)
 harm.list <- as.data.frame(unique(unlist(data$Harm), use.names=FALSE))
 colnames(harm.list) <- c("Harm")
 harm.list$target <- c(0,1,1,1,0,1)
-harm.list$target2 <- c("NoHarm","Harm","Harm","Harm","NoHarm","Harm")
+harm.list$target2 <- c("NoThreat","Threat","Threat","Threat","NoThreat","Threat")
 data <- merge(data, harm.list, by = "Harm")
 table(data$target)
 
@@ -116,6 +116,8 @@ model.nb <- naiveBayes(target2 ~ ., data.m2)
 data.ms.test <- data.m2[,1:13]
 pred.nb <- predict(model.nb, data.ms.test, type="raw")
 
+model.glm <- glm(target ~ ., data.m, family = binomial(link = "logit"))
+pred.glm <- predict(model.glm, data.m)
 
 res.test <- performanceEstimation(
   PredTask(target ~ ., data.m),
