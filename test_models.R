@@ -2,6 +2,8 @@ library(DMwR)
 library(ggplot2)
 library(e1071)
 library(performanceEstimation)
+library(randomForest)
+library(rpart)
 
 
 # Data Understanding/Preparation
@@ -16,7 +18,7 @@ library(performanceEstimation)
 
 # loadData ----------------------------------------------------------------
 ## Load the data into R
-data.raw <- read.csv("D:/0 Stern MSBA/0.2 Abduction/abduction2/Sample_data.csv", stringsAsFactors=TRUE, na.strings = c("NA",""," "))
+data.raw <- read.csv("D:/0 Stern MSBA/0.2 Abduction/abduction2/Sample_data.csv", stringsAsFactors=TRUE, na.strings = c("NA","U",""," "))
 names.data <- c("Date","Victim.Age","Victim.Race","Victim.Gender","Harm","Publicized","Location","Region",
                 "Relationship","RSO","Offender.Age","Offender.Race","Offender.Gender","Rural.City","Missing.Location",
                 "Recovery.Location", "Recovery", "Number.Victims")
@@ -60,6 +62,19 @@ data$Victim.AgeGroup <- cut(data$Victim.Age,
 
 table(data$Victim.AgeGroup)
 
+data$Offender.AgeGroup <- cut(data$Offender.Age,
+                            breaks=c(20,30,40,50,Inf), 
+                            labels=c('<30','30-40','40-50','>50'))
+
+table(data$Offender.AgeGroup)
+
+
+relate.list <- as.data.frame(unique(unlist(data$Relationship), use.names=FALSE))
+colnames(relate.list) <- c("Relationship")
+relate.list$Relate.Group <- as.factor(c("Family Friend", "Relative", "Parent","Parent","Family Friend","Family Friend","Family Friend","Family Friend","Relative","Parent"))
+data <- merge(data, relate.list, by = "Relationship")
+table(data$Relate.Group)
+
 
 # targetVariable ----------------------------------------------------------
 # Create a list of harm responses and identify them as 1/0
@@ -90,52 +105,69 @@ table(data$target)
 # We will use the performanceEstimation package and evaluate several 
 #     common classification models
 # • SVM
-# •	Decision trees (rpart)  #Removed randomForest due to size of data set
+# •	Decision trees (rpart, randomForest)
 # •	NaïveBayes
 # We will evaluate methods for up sampling.  
-#   Recommendations to use
+#   Recommendations to use bootstrapping
 # The models will be evaluated based on Precision and Recall, 
 #     with Recall having a higher weight 
 
 
 
-# modelBuild --------------------------------------------------------------
-####  CREATE MODELS HERE
+# modelEvaluate --------------------------------------------------------------
 
-# Remove Harm (text), Date, Location (17 factors for 20 incidents), Recovery (not known at time)
-data.m <- data[,-which(names(data) %in% c("Harm","Date","Location", "Recovery","target2"))]
-data.m2 <- data[,-which(names(data) %in% c("Harm","Date","Location", "Recovery","target"))]
+# Remove extra attributes and those not known at the time of abduction
+data.m <- data[,-which(names(data) %in% c("RSO", "Harm","Date","Victim.Age","Offender.Age", "Publicized", "Relationship", "Location", "Recovery","Number.Victims","target2"))]
 
-model.tree <- rpartXse (target ~ ., data=data.m)
-pred.tree <- predict(model.tree, data.m)
+# Bug in SMOTE, must be factor and last item in dataframe
+data.m$target <- as.factor(data.m$target)
+data.smote <- SMOTE(target ~ ., data.m, perc.over = 200)
+table(data.smote$target)
+write.csv(data.smote, file = 'data.smote.csv')
 
-model.svm <- svm(target ~ ., data=data.m)
-pred.svm <- predict(model.svm, data.m)
-
-model.nb <- naiveBayes(target2 ~ ., data.m2)
-data.ms.test <- data.m2[,1:13]
-pred.nb <- predict(model.nb, data.ms.test, type="raw")
-
-model.glm <- glm(target ~ ., data.m, family = binomial(link = "logit"))
-pred.glm <- predict(model.glm, data.m)
-
-res.test <- performanceEstimation(
-  PredTask(target ~ ., data.m),
-  workflowVariants("standardWF", learner = "naiveBayes", learner.pars=list(type="raw")),
-  CvSettings(nReps =1, nFolds = 10))
-summary(res.test)
-plot(res.test)
+# rpart requires non factored target
+data.smote.nf <- data.smote
+data.smote.nf$target <- as.numeric(data.smote.nf$target)
 
 
+# Build and evaluation for SVM, NaiveBayes, RandomForest
 res <- performanceEstimation(
-  PredTask(target ~ ., data.m),
+  c(PredTask(target ~ ., data.m),PredTask(target ~ ., data.smote)),
   c(workflowVariants("standardWF", learner = "svm",
            learner.pars=list(cost=c(1,10), gamma=c(0.1,0.01))),
-    workflowVariants("standardWF", learner = "rpartXse",
-                     learner.pars=list(se=c(0,1)))),
-  CvSettings(nReps = 2, nFolds = 10))
-summary(res)
+    workflowVariants("standardWF", learner = "randomForest"),
+    workflowVariants("standardWF", learner = "naiveBayes")),
+  CvSettings(nReps = 3, nFolds = 4))
 plot(res)
 
-# modelEvaluate -----------------------------------------------------------
-#### EVALUATE MODELS HERE
+# Build and evaluation for rpart (requires non factored target)
+res2 <- performanceEstimation(
+  PredTask(target ~ ., data.smote.nf),
+  workflowVariants("standardWF", learner = "rpart"),
+  CvSettings(nReps = 3, nFolds = 4))
+plot(res2)
+
+topPerformers(res)
+topPerformers(res2)
+
+
+# modelFinalBuild -----------------------------------------------------------
+
+# Best model seems to be Naive Bayes
+
+model.nb <- naiveBayes(target ~ ., data.smote)
+pred.nb <- predict(model.nb, data.smote)
+table(pred.nb, data.smote$target)
+model.nb$tables
+
+# Conclusions from evidence...
+
+library("RWeka")
+NB <- make_Weka_classifier("weka/classifiers/bayes/NaiveBayes") 
+model.weka <- NB(target ~ ., data.smote)
+infogain <- as.data.frame(InfoGainAttributeEval(target ~ ., data.smote))
+ig <- cbind(rownames(infogain),infogain)
+colnames(ig) <- c("attribute","gain")
+
+ig$attribute <- factor(ig$attribute, levels = ig[order(-ig$gain),]$attribute)
+ggplot(data=ig, aes(x=attribute, y=gain, fill=-gain)) + geom_bar(stat="identity")
