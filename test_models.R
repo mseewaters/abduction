@@ -170,4 +170,4 @@ ig <- cbind(rownames(infogain),infogain)
 colnames(ig) <- c("attribute","gain")
 
 ig$attribute <- factor(ig$attribute, levels = ig[order(-ig$gain),]$attribute)
-ggplot(data=ig, aes(x=attribute, y=gain, fill=-gain)) + geom_bar(stat="identity")
+ggplot(data=ig, aes(x=attribute, y=gain, fill=gain)) + geom_bar(stat="identity")
