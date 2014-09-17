@@ -108,66 +108,79 @@ table(data$target)
 # •	Decision trees (rpart, randomForest)
 # •	NaïveBayes
 # We will evaluate methods for up sampling.  
-#   Recommendations to use bootstrapping
+##  Recommendation to use bootstrapping for sampling
 # The models will be evaluated based on Precision and Recall, 
 #     with Recall having a higher weight 
 
 
-
-# modelEvaluate --------------------------------------------------------------
+# modelBuildAndEvaluate --------------------------------------------------------------
 
 # Remove extra attributes and those not known at the time of abduction
 data.m <- data[,-which(names(data) %in% c("RSO", "Harm","Date","Victim.Age","Offender.Age", "Publicized", "Relationship", "Location", "Recovery","Number.Victims","target2"))]
 
-# Bug in SMOTE, must be factor and last item in dataframe
+# In SMOTE, target must be factor and last item in dataframe
 data.m$target <- as.factor(data.m$target)
-data.smote <- SMOTE(target ~ ., data.m, perc.over = 200)
+data.smote <- SMOTE(target ~ ., data.m, perc.over = 500)
 table(data.smote$target)
-write.csv(data.smote, file = 'data.smote.csv')
+data.smote2 <- SMOTE(target ~ ., data.m, perc.over = 500, perc.under = 150)
+table(data.smote2$target)
 
 # rpart requires non factored target
+data.m.nf <- data.m
+data.m.nf$target <- as.numeric(data.m.nf$target)
 data.smote.nf <- data.smote
 data.smote.nf$target <- as.numeric(data.smote.nf$target)
+data.smote2.nf <- data.smote2
+data.smote2.nf$target <- as.numeric(data.smote2.nf$target)
 
 
 # Build and evaluation for SVM, NaiveBayes, RandomForest
 res <- performanceEstimation(
-  c(PredTask(target ~ ., data.m),PredTask(target ~ ., data.smote)),
+  c(PredTask(target ~ ., data.m),PredTask(target ~ ., data.smote),
+    PredTask(target ~ ., data.smote2)),
   c(workflowVariants("standardWF", learner = "svm",
-           learner.pars=list(cost=c(1,10), gamma=c(0.1,0.01))),
-    workflowVariants("standardWF", learner = "randomForest"),
+           learner.pars=list(cost=c(1,10,100), gamma=c(0.1,0.01))),
+    workflowVariants("standardWF", learner = "randomForest",
+                     learner.pars=list(ntree = c(5,50,200), nodesize = c(2,5))),
     workflowVariants("standardWF", learner = "naiveBayes")),
-  CvSettings(nReps = 3, nFolds = 4))
-plot(res)
+  BootSettings(type=".632", nReps=200))
+
 
 # Build and evaluation for rpart (requires non factored target)
-res2 <- performanceEstimation(
-  PredTask(target ~ ., data.smote.nf),
-  workflowVariants("standardWF", learner = "rpart"),
-  CvSettings(nReps = 3, nFolds = 4))
-plot(res2)
+res.nf <- performanceEstimation(
+  c(PredTask(target ~ ., data.m.nf),PredTask(target ~ ., data.smote.nf),
+    PredTask(target ~ ., data.smote2.nf)),
+  Workflow("standardWF", learner = "rpartXse", learner.pars=list(se=c(0,0.5,1))),
+  BootSettings(type=".632", nReps=200))
 
+#Show results
+plot(res)
+plot(res.nf)
+
+# Show best model
 topPerformers(res)
-topPerformers(res2)
+topPerformers(res.nf)
 
+# Generally randomForest.v2 has lowest error
+getWorkflow("randomForest.v6", res)
 
 # modelFinalBuild -----------------------------------------------------------
 
-# Best model seems to be Naive Bayes
-
-model.nb <- naiveBayes(target ~ ., data.smote)
-pred.nb <- predict(model.nb, data.smote)
-table(pred.nb, data.smote$target)
-model.nb$tables
-
-# Conclusions from evidence...
+# Best model seems to be randomForest 
+# although NaiveBayes sometimes rises to the top
+# Will evaluate all models on additional data
+# Commentary on need to understand factors
+# Evaluation of information gain using naiveBayes
 
 library("RWeka")
 NB <- make_Weka_classifier("weka/classifiers/bayes/NaiveBayes") 
-model.weka <- NB(target ~ ., data.smote)
-infogain <- as.data.frame(InfoGainAttributeEval(target ~ ., data.smote))
+model.weka <- NB(target ~ ., data.smote2)
+infogain <- as.data.frame(InfoGainAttributeEval(target ~ ., data.smote2))
 ig <- cbind(rownames(infogain),infogain)
 colnames(ig) <- c("attribute","gain")
-
+summary(model.weka)
 ig$attribute <- factor(ig$attribute, levels = ig[order(-ig$gain),]$attribute)
 ggplot(data=ig, aes(x=attribute, y=gain, fill=gain)) + geom_bar(stat="identity")
+
+
+# Include comments from Ashli-Jade and our preliminary findings
