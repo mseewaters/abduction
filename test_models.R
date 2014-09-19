@@ -4,7 +4,7 @@ library(e1071)
 library(performanceEstimation)
 library(randomForest)
 library(rpart)
-
+library(plyr)
 
 # Data Understanding/Preparation
 # Using the existing data set, we will
@@ -18,7 +18,7 @@ library(rpart)
 
 # loadData ----------------------------------------------------------------
 ## Load the data into R
-data.raw <- read.csv("D:/0 Stern MSBA/0.2 Abduction/abduction2/Sample_data.csv", stringsAsFactors=TRUE, na.strings = c("NA","U",""," "))
+data.raw <- read.csv("Sample_data.csv", stringsAsFactors=TRUE, na.strings = c("NA","U",""," "))
 names.data <- c("Date","Victim.Age","Victim.Race","Victim.Gender","Harm","Publicized","Location","Region",
                 "Relationship","RSO","Offender.Age","Offender.Race","Offender.Gender","Rural.City","Missing.Location",
                 "Recovery.Location", "Recovery", "Number.Victims")
@@ -46,7 +46,7 @@ x
 # Almost half of observations missing data
 data <- data[,-which(names(data) %in% c("Recovery.Location","Missing.Location"))]
 
-# Fill RSO and Rural.City using nearest neighbors
+# Fill RSO, Offender.Race, Offender.Age, Rural.City using nearest neighbors
 data <- knnImputation(data, k=3)
 check <- nrow(data[!complete.cases(data),])
 
@@ -97,8 +97,46 @@ table(data$target)
 
 
 # distributionsPlot -------------------------------------------------------
-####  PLOT DISTRIBUTIONS
-##
+
+#The father appears to be the highest abduction rate, however statically its the mother
+ggplot(data, aes(x=Victim.Age, y=Relationship)) + geom_boxplot() +
+  stat_summary(fun.y=mean, geom="point", shape=5, size=4)
+
+#Higher counts in the Souteast and South Central and again the father appears to be the abductor
+ggplot(data, aes(x=Relationship)) + geom_histogram(binwidth=.5, colour="black", fill="blue") + 
+  facet_grid(Region ~ .)
+
+
+#Density Plots of age of Victim and Offender with Mean line
+ggplot(data, aes(x=Victim.Age)) + geom_histogram(binwidth=.5, colour="black", fill="white") +
+  geom_vline(aes(xintercept=mean(Victim.Age, na.rm=T)),   # Ignore NA values for mean
+             color="red", linetype="dashed", size=1)
+
+ggplot(data, aes(x=Offender.Age)) + geom_histogram(binwidth=.5, colour="black", fill="white") +
+  geom_vline(aes(xintercept=mean(Victim.Age, na.rm=T)),   # Ignore NA values for mean
+             color="red", linetype="dashed", size=1)
+
+#Our data show generally no harm is done to the child
+ggplot(data, aes(x=Harm, fill=Victim.Gender)) + geom_histogram(binwidth=.5, position="dodge")
+
+#Interesting for the most part children are recovered, girls are the only missing in our data
+ggplot(data, aes(x=Recovery, fill=Victim.Gender)) + geom_histogram(binwidth=.5, position="dodge")
+
+#The majority of cases are pubicized with the highest being in the South Central Region
+ggplot(data, aes(x=Publicized, fill=Region)) + geom_histogram(binwidth=.5, position="dodge")
+
+#Southeast and West appear to have the highest rates of abduction
+ggplot(data, aes(x=Victim.Age, fill=Region)) + geom_histogram(binwidth=.5, position="dodge")
+
+#Switching the axis South Central appears to have the highest overall counts
+ggplot(data, aes(x=Region, fill=Victim.Age)) + geom_histogram(binwidth=.5, position="dodge")
+
+
+#Whites and Blacks dominate abduction cases with whites dominating in Southeast, Central and
+#blacks dominating in South Central and West, hispanic abduction appears rare in our data from
+#my additional research with DCFS this is due to non reporting and immigration status
+ggplot(data, aes(x=Region, fill=Victim.Race)) + geom_histogram(binwidth=.5, position="dodge")
+
 
 
 
@@ -116,7 +154,7 @@ table(data$target)
 # modelBuildAndEvaluate --------------------------------------------------------------
 
 # Remove extra attributes and those not known at the time of abduction
-data.m <- data[,-which(names(data) %in% c("RSO", "Harm","Date","Victim.Age","Offender.Age", "Publicized", "Relationship", "Location", "Recovery","Number.Victims","target2"))]
+data.m <- data[,-which(names(data) %in% c("RSO", "Harm","Date","Victim.Age","Offender.Age", "Relationship", "Location", "Recovery","Number.Victims","target2"))]
 
 # In SMOTE, target must be factor and last item in dataframe
 data.m$target <- as.factor(data.m$target)
