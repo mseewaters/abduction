@@ -1,0 +1,358 @@
+---
+title: "Predicting threatening situations in custody-related child abductions"
+author: 'The Protectors: May Chan, Padma Hari, Kimberly Sanders, Marjorie Waters'
+date: "Friday, September 19, 2014"
+output: pdf_document
+---
+
+Our ultimate goal statement is to identify the risk factors that lead to custodial/non-custodial child abduction.   The data available for this crime is extremely limited and at this time we have only a small sample of 20 incidents from 2013.  We are expecting an additional 3-4 years of data later in September.   Based on conversations with our FBI sponsor, our secondary goal is to determine the factors that indicate higher risk of a threatening situation developing and that will be the focus of our initial exploration.
+
+The preliminary data set was provided by the FBI.  In addition to standard options, the string "U" for unidentified was also converted to NA for consistent treatment in R.
+
+```{r eval=FALSE}
+
+library(DMwR)
+library(ggplot2)
+library(e1071)
+library(performanceEstimation)
+library(randomForest)
+library(rpart)
+library(plyr)
+
+```
+
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+
+library(DMwR)
+library(ggplot2)
+library(e1071)
+library(performanceEstimation)
+library(randomForest)
+library(rpart)
+library(plyr)
+```
+
+
+```{r warning=FALSE}
+
+## Load the data into R and convert column names
+data.raw <- read.csv("D:/0 Stern MSBA/0.2 Abduction/abduction2/Sample_data.csv",
+                     stringsAsFactors=TRUE, na.strings = c("NA","U",""," "))
+names.data <- c("Date","Victim.Age","Victim.Race","Victim.Gender","Harm",
+                "Publicized","Location","Region","Relationship","RSO","Offender.Age",
+                "Offender.Race","Offender.Gender","Rural.City","Missing.Location",
+                "Recovery.Location", "Recovery", "Number.Victims")
+colnames(data.raw) <- names.data
+head(data.raw,1)
+```
+
+## Data pre-processing
+
+The dataset was evaluated for missing data.  Several attributes are considered critical to the analysis; observations without basic information on the victim and the relationship to the offender were removed.
+
+```{r}
+
+# Remove lines where victim info and relationship is not provided
+data <- data.raw[complete.cases(data.raw[,c(2,3,4,5,9)]),]
+
+```
+
+For other attributes, the number of missing fields was determined.  
+
+```{r}
+# Count NA by variable and isolate fields with at least 1 NA
+data.empty = NULL
+for (i in 1:length(data))
+{
+  data.empty[i] <- length(which(is.na(data[i])))  
+}
+x <- as.data.frame(cbind(names.data, data.empty)[order(-data.empty),])
+x <- x[which(x$data.empty != 0),]
+
+```
+
+```{r echo=FALSE, results='asis'}
+knitr::kable(x)
+```
+
+Factors with ~50% or more missing instances, Recovery.Location and Missing.Location, were removed from the data set.  The other missing data was filled using k-nearest neighbor matching.
+
+```{r}
+
+# Remove Recovery.Location and Missing.Location, almost half of observations missing data
+data <- data[,-which(names(data) %in% c("Recovery.Location","Missing.Location"))]
+
+# Fill RSO, Offender.Race, Offender.Age, Rural.City using nearest neighbors
+data <- knnImputation(data, k=3)
+check <- nrow(data[!complete.cases(data),])
+
+```
+
+
+Create age groupings and generalized relationships
+
+```{r}
+
+# Create victim age group
+data$Victim.AgeGroup <- cut(data$Victim.Age, 
+                            breaks=c(-0.5,5.5,10.5,Inf), 
+                            labels=c('0-5','6-10','11-15'))
+table(data$Victim.AgeGroup)
+
+```
+
+
+
+```{r}
+data$Offender.AgeGroup <- cut(data$Offender.Age,
+                            breaks=c(20,30,40,50,Inf), 
+                            labels=c('<30','30-40','40-50','>50'))
+
+table(data$Offender.AgeGroup)
+```
+
+```{r}
+
+relate.list <- as.data.frame(unique(unlist(data$Relationship), use.names=FALSE))
+colnames(relate.list) <- c("Relationship")
+relate.list$Relate.Group <- as.factor(c("Family Friend", "Relative", "Parent","Parent","Family Friend","Family Friend","Family Friend","Family Friend","Relative","Parent"))
+data <- merge(data, relate.list, by = "Relationship")
+table(data$Relate.Group)
+
+```
+
+The analysis is intended to identify abductions with a high risk of potential violence.  While actions from law enforcement most often prevent tragic outcomes, identifying these situations inadvance would be beneficial for focusing efforts.  Our target variable is thus situations with a threat of harm vs those without.
+
+```{r}
+
+# Create a list of harm responses and identify them as 1/0
+harm.list <- as.data.frame(unique(unlist(data$Harm), use.names=FALSE))
+colnames(harm.list) <- c("Harm")
+harm.list$target <- c(0,1,1,1,0,1)
+data <- merge(data, harm.list, by = "Harm")
+table(data$target)
+
+```
+
+For the small sample dataset, `r sum(data$target)` out of `r length(data$target)` incidents `r paste0('(', round(sum(data$target)/length(data$target)*100,1),'%)')` show evidence of threatening situations.
+
+## Evaluating the data
+
+commentary on graphing data
+The father appears to be the highest abduction rate, however statically its the mother
+
+```{r warning=FALSE}
+
+ggplot(data, aes(x=Victim.Age, y=Relationship)) + geom_boxplot() +
+  stat_summary(fun.y=mean, geom="point", shape=5, size=4)
+
+```
+
+Higher counts in the Souteast and South Central and again the father appears to be the abductor
+
+```{r warning=FALSE}
+
+ggplot(data, aes(x=Relationship)) + geom_histogram(binwidth=.5, 
+                colour="black", fill="blue") + facet_grid(Region ~ .)
+
+```
+
+Density Plots of age of Victim and Offender with Mean line
+
+```{r warning=FALSE}
+ggplot(data, aes(x=Victim.Age)) + geom_histogram(binwidth=.5, colour="black", fill="white") +
+  geom_vline(aes(xintercept=mean(Victim.Age, na.rm=T)),   # Ignore NA values for mean
+             color="red", linetype="dashed", size=1)
+
+ggplot(data, aes(x=Offender.Age)) + geom_histogram(binwidth=.5, colour="black", fill="white") +
+  geom_vline(aes(xintercept=mean(Victim.Age, na.rm=T)),   # Ignore NA values for mean
+             color="red", linetype="dashed", size=1)
+
+```
+
+Interesting for the most part children are recovered, girls are the only missing in our data
+
+```{r warning=FALSE}
+
+ggplot(data, aes(x=Recovery, fill=Victim.Gender)) + geom_histogram(binwidth=.5, position="dodge")
+
+```
+
+The majority of cases are pubicized with the highest being in the South Central Region
+
+```{r warning=FALSE}
+
+ggplot(data, aes(x=Publicized, fill=Region)) + geom_histogram(binwidth=.5, position="dodge")
+
+```
+
+The majority of incidents in our small data set occur in the Southeast and West
+**Kimberly - I would avoid comments on regional "rates" as this is a small set and may be baised.  this might also be duplicative of the map.
+
+```{r warning=FALSE}
+
+ggplot(data, aes(x=Victim.Age, fill=Region)) + geom_histogram(binwidth=.5, position="dodge")
+
+```
+
+Switching the axis South Central appears to have the highest overall counts
+
+```{r warning=FALSE}
+
+# ggplot(data, aes(x=Region, fill=Victim.Age)) + geom_histogram(binwidth=.5, position="dodge")
+
+```
+
+Whites and Blacks dominate abduction cases with whites dominating in Southeast, Central and
+blacks dominating in South Central and West, hispanic abduction appears rare in our data from
+my additional research with DCFS this is due to non reporting and immigration status
+```{r warning=FALSE}
+
+ggplot(data, aes(x=Region, fill=Victim.Race)) + geom_histogram(binwidth=.5, position="dodge")
+
+```
+
+# Data processing for model building
+
+Several factors were removed from the data set prior to evaluating predictive models.  RSO "registed sex offender" only has "No" fields and provides no differentiation.  Numerical age groups and detailed city were eliminated in favor of age groups and region.  When additional data is available, using the direct age will be considered.  Data that is unknown prior to or in the early stages of an abduction (Publicized, Recovery) and the temporary variables (Harm, Relationship) were also removed.
+
+```{r}
+# Remove extra attributes and those not known at the time of abduction
+data.m <- data[,-which(names(data) %in% c("RSO", "Harm","Date","Victim.Age",
+                    "Offender.Age", "Relationship", "Location", "Recovery",
+                    "Publicized", "Number.Victims"))]
+
+```
+
+Due to the relatively low rate of occurance ofthe target variable, two additional test datasets were created that upsample the minority target case.  Data sets with the target vairable as factored and numeric were created to meet the needs of different models.
+
+
+```{r}
+# In SMOTE, target must be factor and last item in dataframe
+data.m$target <- as.factor(data.m$target)
+data.smote <- SMOTE(target ~ ., data.m, perc.over = 500)
+data.smote2 <- SMOTE(target ~ ., data.m, perc.over = 500, perc.under = 150)
+smote.output <- as.data.frame(rbind(table(data.m$target),
+                table(data.smote$target),table(data.smote2$target)))
+rownames(smote.output) <- c("original data","upsampling","upsampling/downsampling")
+
+
+# rpartXse in performanceEstimation requires non factored target
+data.m.nf <- data.m
+data.m.nf$target <- as.numeric(data.m.nf$target)
+data.smote.nf <- data.smote
+data.smote.nf$target <- as.numeric(data.smote.nf$target)
+data.smote2.nf <- data.smote2
+data.smote2.nf$target <- as.numeric(data.smote2.nf$target)
+
+```
+
+Summary of target variable in the different datasets:
+```{r echo=FALSE, results='asis'}
+knitr::kable(smote.output)
+```
+
+# Model building and evaluation
+
+Our initial evaluation used four modeling techniques with assorted options.
+
+* Tree induction (rpart)
+* Random Forest
+* SVM
+* Naive Bayes
+
+Due to the small sample size, bootstrap sampling was used, which uses random sampling with replacement to create the training data.
+
+```{r eval=FALSE}
+
+
+# Build and evaluation for rpart (requires non factored target)
+res.nf <- performanceEstimation(
+  c(PredTask(target ~ ., data.m.nf),PredTask(target ~ ., data.smote.nf),
+    PredTask(target ~ ., data.smote2.nf)),
+  workflowVariants("standardWF", learner = "rpartXse", learner.pars=list(se=c(0,0.5,1))),
+  BootSettings(type=".632", nReps=200))
+
+# Build and evaluation for SVM, NaiveBayes, RandomForest
+res <- performanceEstimation(
+  c(PredTask(target ~ ., data.m),PredTask(target ~ ., data.smote),
+    PredTask(target ~ ., data.smote2)),
+  c(workflowVariants("standardWF", learner = "svm",
+           learner.pars=list(cost=c(1,10,100), gamma=c(0.1,0.01))),
+    workflowVariants("standardWF", learner = "randomForest",
+                     learner.pars=list(ntree = c(5,50,200), nodesize = c(2,5))),
+    workflowVariants("standardWF", learner = "naiveBayes")),
+  BootSettings(type=".632", nReps=200))
+
+
+```
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, results='hide'}
+
+# Build and evaluation for rpart (requires non factored target)
+res.nf <- performanceEstimation(
+  c(PredTask(target ~ ., data.m.nf),PredTask(target ~ ., data.smote.nf),
+    PredTask(target ~ ., data.smote2.nf)),
+  workflowVariants("standardWF", learner = "rpartXse", learner.pars=list(se=c(0,0.5,1))),
+  BootSettings(type=".632", nReps=2))
+
+# Build and evaluation for SVM, NaiveBayes, RandomForest
+res <- performanceEstimation(
+  c(PredTask(target ~ ., data.m),PredTask(target ~ ., data.smote),
+    PredTask(target ~ ., data.smote2)),
+  c(workflowVariants("standardWF", learner = "svm",
+           learner.pars=list(cost=c(1,10,100), gamma=c(0.1,0.01))),
+    workflowVariants("standardWF", learner = "randomForest",
+                     learner.pars=list(ntree = c(5,50,200), nodesize = c(2,5))),
+    workflowVariants("standardWF", learner = "naiveBayes")),
+  BootSettings(type=".632", nReps=2))
+
+```
+
+The models using factored targets vs numerical were run separately.  The results of the two sets of runs are shown in the graphs below.
+
+```{r echo=FALSE}
+
+plot(res)
+plot(res.nf)
+
+```
+
+The top performers of the two sets are
+
+```{r echo=FALSE}
+
+topPerformers(res)
+topPerformers(res.nf)
+
+```
+
+With the small sample size, even with bootstrap sampling, the results of different runs are variable.  Typically, the top performers are svm.v2, naiveBayes, randomForest.v6.  That 200 repetition bootstrap still gives varying results is indicative the the sample size is insufficient.  With 20 observations and 10 factors, the models are undoubtedly overfitting.
+
+We expect to recieve additional data next week from our FBI sponsor and will run this through the existing models.  Her interest is primarily in identifying risk factors.  Models such as svm and randomForests, that may provide better predictions, may not meet her needs.
+
+# Conclusions and next steps
+
+In preparation for discussing the data and preliminary results, we ran the Naive Bayes model on the upsampled data and identified the factors that are providing the most information gain.  
+
+
+```{r message=FALSE}
+
+library("RWeka")
+NB <- make_Weka_classifier("weka/classifiers/bayes/NaiveBayes") 
+model.weka <- NB(target ~ ., data.smote)
+infogain <- as.data.frame(InfoGainAttributeEval(target ~ ., data.smote))
+ig <- cbind(rownames(infogain),infogain)
+colnames(ig) <- c("attribute","gain")
+summary(model.weka)
+ig$attribute <- factor(ig$attribute, levels = ig[order(-ig$gain),]$attribute)
+ggplot(data=ig, aes(x=attribute, y=gain, fill=gain)) + geom_bar(stat="identity") + 
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+```
+
+
+The results are consistent with our sponsors's experience and gut feelings.  Younger victims are easier to coerce.  Parents that engage in abduction have more tendency to be interested in revenge and thus trend more violently.  The regional effect is surprisingand bears further investigation.  A specific question that she was interested in was whether the location, rural vs city, was important.  Our preliminary results indicate that it isn't, additional data will confirm/reject this.
+
+
+Some conclusions and next steps.....
