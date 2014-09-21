@@ -7,7 +7,9 @@ output: pdf_document
 
 Our ultimate goal statement is to identify the risk factors that lead to custodial/non-custodial child abduction.   The data available for this crime is extremely limited and at this time we have only a small sample of 20 incidents from 2013.  We are expecting an additional 3-4 years of data later in September.   Based on conversations with our FBI sponsor, our secondary goal is to determine the factors that indicate higher risk of a threatening situation developing and that will be the focus of our initial exploration.
 
-The preliminary data set was provided by the FBI.  In addition to standard options, the string "U" for unidentified was also converted to NA for consistent treatment in R.
+The preliminary data set was provided by the FBI.  In addition to standard options, the string "U" for unidentified was also converted to NA for consistent treatment in R.  
+
+For the purposes of this analysis, all R-code is shown along with the output.
 
 ```{r eval=FALSE}
 
@@ -18,6 +20,9 @@ library(performanceEstimation)
 library(randomForest)
 library(rpart)
 library(plyr)
+library(corrplot)
+library(ggmap)
+library(gridExtra)
 
 ```
 
@@ -30,34 +35,46 @@ library(performanceEstimation)
 library(randomForest)
 library(rpart)
 library(plyr)
+library(corrplot)
+library(ggmap)
+library(gridExtra)
+
 ```
 
 
 ```{r warning=FALSE}
 
 ## Load the data into R and convert column names
-data.raw <- read.csv("D:/0 Stern MSBA/0.2 Abduction/abduction2/Sample_data.csv",
+data.raw <- read.csv("Sample_data.csv",
                      stringsAsFactors=TRUE, na.strings = c("NA","U",""," "))
 names.data <- c("Date","Victim.Age","Victim.Race","Victim.Gender","Harm",
                 "Publicized","Location","Region","Relationship","RSO","Offender.Age",
                 "Offender.Race","Offender.Gender","Rural.City","Missing.Location",
                 "Recovery.Location", "Recovery", "Number.Victims")
 colnames(data.raw) <- names.data
+
+# Remove all carriage returns
+for (i in 1:length(data.raw))
+{
+  if (class(data.raw[,i]) == "factor") levels(data.raw[,i]) <- gsub("\n","", levels(data.raw[,i]))
+}
+
 head(data.raw,1)
+
 ```
 
 ## Data pre-processing
 
-The dataset was evaluated for missing data.  Several attributes are considered critical to the analysis; observations without basic information on the victim and the relationship to the offender were removed.
+The dataset was evaluated for missing data.  Several attributes are considered critical to the analysis, victim attributes and relationship of victim to offender; observations with insuffient basic information were removed.
 
 ```{r}
 
-# Remove lines where victim info and relationship is not provided
+# Remove lines where victim info and relationship is not provided, one line removed
 data <- data.raw[complete.cases(data.raw[,c(2,3,4,5,9)]),]
 
 ```
 
-For other attributes, the number of missing fields was determined.  
+This results in the removal of `r nrow(data.raw)-nrow(data)` lines.  For the other attributes, the number of missing fields was determined to help determine the best approach for handling them.  
 
 ```{r}
 # Count NA by variable and isolate fields with at least 1 NA
@@ -75,7 +92,7 @@ x <- x[which(x$data.empty != 0),]
 knitr::kable(x)
 ```
 
-Factors with ~50% or more missing instances, Recovery.Location and Missing.Location, were removed from the data set.  The other missing data was filled using k-nearest neighbor matching.
+Factors with ~50% or more missing instances, Recovery.Location and Missing.Location, were removed from the data set.  The other missing data was filled using k-nearest neighbor matching, using k=3.
 
 ```{r}
 
@@ -89,7 +106,7 @@ check <- nrow(data[!complete.cases(data),])
 ```
 
 
-Create age groupings and generalized relationships
+Age groupings of the victim and offender were created.  This aids in data evaluations as we are interested in differences between younger children and older children.  In addition, our FBI sponsor is interested in generalized risk factors.  
 
 ```{r}
 
@@ -101,8 +118,6 @@ table(data$Victim.AgeGroup)
 
 ```
 
-
-
 ```{r}
 data$Offender.AgeGroup <- cut(data$Offender.Age,
                             breaks=c(20,30,40,50,Inf), 
@@ -110,6 +125,8 @@ data$Offender.AgeGroup <- cut(data$Offender.Age,
 
 table(data$Offender.AgeGroup)
 ```
+
+A relationship group was created to generalize the more detailed list provided in the original data.  As an example, "Father's girlfriend" and "Mother's boyfriend" were both converted to the group "Family friend". 
 
 ```{r}
 
@@ -121,7 +138,9 @@ table(data$Relate.Group)
 
 ```
 
-The analysis is intended to identify abductions with a high risk of potential violence.  While actions from law enforcement most often prevent tragic outcomes, identifying these situations inadvance would be beneficial for focusing efforts.  Our target variable is thus situations with a threat of harm vs those without.
+*Creating the target variable*
+
+The analysis is intended to identify abductions with a high risk of potential violence.  While actions from law enforcement most often prevent tragic outcomes, these situtation may escalate to physical or psychological harm to the child. Identifying these situations in advance would be beneficial for focusing efforts.  Our target variable is thus situations with a threat of violence vs those without.  For example, incidents where the child was abducted at gunpoint is considered violent, even if the child was not physically harmed.  Our sample has no instances where the child was physically harmed, in the larger data this would be included.
 
 ```{r}
 
@@ -138,8 +157,73 @@ For the small sample dataset, `r sum(data$target)` out of `r length(data$target)
 
 ## Evaluating the data
 
-commentary on graphing data
-The father appears to be the highest abduction rate, however statically its the mother
+We looked at the geographic distribution of incidents in the data.  The incidents are generally spread across the US, although there are no examples from the northeast or the northwest states.  The majority of incidents occur in the south and central regions.
+
+```{r  message=FALSE, warning=FALSE}
+
+library(ggmap)
+loc <- data.frame()
+all_locs <- paste0(as.character(data$Location),", US")
+unique_locs <- unique(all_locs)
+for (i in 1:length(unique_locs))
+{
+  geo.res <- geocode(unique_locs[i], messaging = FALSE)
+  loc[i,1] <- geo.res[1]
+  loc[i,2] <- geo.res[2]
+  loc[i,3] <- length(all_locs[all_locs==unique_locs[i]])
+}
+
+map <- get_map("united states", zoom = 4)
+ggmap(map, extent="device") + geom_point(aes(x=lon, y=lat), 
+              data=loc, color="darkred", size=3+3*loc$V3)
+
+```
+
+The correlation of several key attributes is shown below.
+
+```{r}
+cor.data <- data[,c(4:7,11:14,9,19,20)]
+for (i in 1:length(cor.data))
+{
+  cor.data[,i] <- as.numeric(cor.data[,i])
+}
+c <- cor(cor.data)
+corrplot(c)
+```
+
+ Interestingly from a data perspective, rural.city is correlated to victim gender and publicized; rural incidentsin our sample data set are more likely to be publicized, incidents in cities are more often male victims.  Victim age and offender gender are slighlty correlated to victim-offender relationship.  
+ 
+```{r}
+
+# detailed bar charts of interesting correlations
+p1 <- ggplot(data, aes(x=Rural.City, fill=Victim.Gender)) + geom_bar(stat='bin') + ggtitle("Victim Gender and Rural/City")
+p2 <- ggplot(data, aes(x=Rural.City, fill=Publicized)) + geom_bar(stat='bin') + ggtitle("Publicized and Rural/City")
+p3 <- ggplot(data, aes(x=Victim.AgeGroup, fill=Relate.Group)) + geom_bar(stat='bin') + ggtitle("Victim Age and Relationship to Offender")
+p4 <- ggplot(data, aes(x=Offender.Gender, fill=Relate.Group)) + geom_bar(stat='bin') + ggtitle("Offender Gender and Relationship to Victim")
+grid.arrange(p1,p2,p3,p4,ncol=2)
+
+```
+
+Interestingly, Victim age and Victim gender are correlated to the target. Although there are more females victims represented in the sample, males are more likely to be exposed to incidents with violence.  All of the violent incidents are with children 5 and under.
+
+```{r}
+# detailed bar charts of interesting correlations witht he target variable
+p1 <- ggplot(data, aes(x=Victim.Gender, fill=as.factor(target))) + geom_bar(stat='bin') + ggtitle("Violence and Victim Gender")
+p2 <- ggplot(data, aes(x=Victim.AgeGroup, fill=as.factor(target))) + geom_bar(stat='bin') + ggtitle("Violence and Victim Age")
+grid.arrange(p1,p2, ncol=2)
+
+```
+
+
+The race of the offender and victim is highly correlated, which is unsurpising.  Looking further into the data, White and Black offenders dominate abduction cases with whites dominating in Southeast, Central and blacks dominating in South Central and West, hispanic abduction appears rare in our data from our additional research with DCFS this is may be due to non reporting and immigration status.  OUr FBI sponsor has cautioned about including race and region in the analysis as this are politcally sensitive topics, however from a data driven perspective we have maintained them for the analysis.
+
+```{r warning=FALSE}
+p1 <- ggplot(data, aes(x=Offender.Race, fill=Victim.Race)) + geom_bar(stat='bin') + ggtitle("Victim and Offender Race")
+p2 <- ggplot(data, aes(x=Region, fill=Victim.Race)) + geom_histogram(binwidth=.5, position="dodge") + ggtitle("Victim Race by Region")
+grid.arrange(p1,p2, ncol=2)
+```
+
+The father appears to have the highest incident rate in our limited sample set, however, statically speaking, based on additional information from DCFS, the mother is more often the offender.
 
 ```{r warning=FALSE}
 
@@ -148,7 +232,7 @@ ggplot(data, aes(x=Victim.Age, y=Relationship)) + geom_boxplot() +
 
 ```
 
-Higher counts in the Souteast and South Central and again the father appears to be the abductor
+We see higher counts in the Souteast and South Central, as we saw in the geographic plot, and the father appears to be the most common offender across all regions.
 
 ```{r warning=FALSE}
 
@@ -157,7 +241,7 @@ ggplot(data, aes(x=Relationship)) + geom_histogram(binwidth=.5,
 
 ```
 
-Density Plots of age of Victim and Offender with Mean line
+The age of the victims is spread from `r round(min(data$Victim.Age),0)` to `r round(min(data$Victim.Age),0)`, with a mean of `r round(mean(data$Victim.Age),0)`. The age of the offenders range from `r round(min(data$Offender.Age),0)` to `r round(max(data$Offender.Age),0)`, with a mean of `r round(mean(data$Offender.Age),0)`
 
 ```{r warning=FALSE}
 ggplot(data, aes(x=Victim.Age)) + geom_histogram(binwidth=.5, colour="black", fill="white") +
@@ -170,15 +254,7 @@ ggplot(data, aes(x=Offender.Age)) + geom_histogram(binwidth=.5, colour="black", 
 
 ```
 
-Interesting for the most part children are recovered, girls are the only missing in our data
-
-```{r warning=FALSE}
-
-ggplot(data, aes(x=Recovery, fill=Victim.Gender)) + geom_histogram(binwidth=.5, position="dodge")
-
-```
-
-The majority of cases are pubicized with the highest being in the South Central Region
+The majority of cases are pubicized with the highest being in the South Central Region.  With the small data set, its difficult to drawn conclusions.  If this holds in the final data set, additional sponsor knowledge will be sought to understand why this is the case and the interaction of publicity with the trand toward violence.
 
 ```{r warning=FALSE}
 
@@ -186,35 +262,10 @@ ggplot(data, aes(x=Publicized, fill=Region)) + geom_histogram(binwidth=.5, posit
 
 ```
 
-The majority of incidents in our small data set occur in the Southeast and West
-**Kimberly - I would avoid comments on regional "rates" as this is a small set and may be baised.  this might also be duplicative of the map.
-
-```{r warning=FALSE}
-
-ggplot(data, aes(x=Victim.Age, fill=Region)) + geom_histogram(binwidth=.5, position="dodge")
-
-```
-
-Switching the axis South Central appears to have the highest overall counts
-
-```{r warning=FALSE}
-
-# ggplot(data, aes(x=Region, fill=Victim.Age)) + geom_histogram(binwidth=.5, position="dodge")
-
-```
-
-Whites and Blacks dominate abduction cases with whites dominating in Southeast, Central and
-blacks dominating in South Central and West, hispanic abduction appears rare in our data from
-my additional research with DCFS this is due to non reporting and immigration status
-```{r warning=FALSE}
-
-ggplot(data, aes(x=Region, fill=Victim.Race)) + geom_histogram(binwidth=.5, position="dodge")
-
-```
 
 # Data processing for model building
 
-Several factors were removed from the data set prior to evaluating predictive models.  RSO "registed sex offender" only has "No" fields and provides no differentiation.  Numerical age groups and detailed city were eliminated in favor of age groups and region.  When additional data is available, using the direct age will be considered.  Data that is unknown prior to or in the early stages of an abduction (Publicized, Recovery) and the temporary variables (Harm, Relationship) were also removed.
+Several factors were removed from the data set prior to evaluating predictive models.  RSO, registed sex offender, only has "No" fields and provides no differentiation.  Numerical age groups and detailed city were eliminated in favor of age groups and region.  When additional data is available, using the direct age will be considered.  Data that is unknown prior to or in the early stages of an abduction (Publicized, Recovery) and the temporary variables (Harm, Relationship) were also removed.
 
 ```{r}
 # Remove extra attributes and those not known at the time of abduction
@@ -261,7 +312,8 @@ Our initial evaluation used four modeling techniques with assorted options.
 * SVM
 * Naive Bayes
 
-Due to the small sample size, bootstrap sampling was used, which uses random sampling with replacement to create the training data.
+Due to the small sample size, bootstrap sampling was used, which uses random sampling with replacement to create the training data.  With the extrenely small size of our sample data set, even with bootstrap sampling, the results of different runs tend to be variable.  Final interpreations and conclusions on the modeling will be done once we get teh full data set next week.
+
 
 ```{r eval=FALSE}
 
@@ -327,7 +379,7 @@ topPerformers(res.nf)
 
 ```
 
-With the small sample size, even with bootstrap sampling, the results of different runs are variable.  Typically, the top performers are svm.v2, naiveBayes, randomForest.v6.  That 200 repetition bootstrap still gives varying results is indicative the the sample size is insufficient.  With 20 observations and 10 factors, the models are undoubtedly overfitting.
+Typically, the top performers are svm.v2, naiveBayes, randomForest.v6.  That 200 repetition bootstrap still gives varying results is indicative the the sample size is insufficient.  With 20 observations and 10 factors, the models are undoubtedly overfitting.
 
 We expect to recieve additional data next week from our FBI sponsor and will run this through the existing models.  Her interest is primarily in identifying risk factors.  Models such as svm and randomForests, that may provide better predictions, may not meet her needs.
 
@@ -355,4 +407,6 @@ ggplot(data=ig, aes(x=attribute, y=gain, fill=gain)) + geom_bar(stat="identity")
 The results are consistent with our sponsors's experience and gut feelings.  Younger victims are easier to coerce.  Parents that engage in abduction have more tendency to be interested in revenge and thus trend more violently.  The regional effect is surprisingand bears further investigation.  A specific question that she was interested in was whether the location, rural vs city, was important.  Our preliminary results indicate that it isn't, additional data will confirm/reject this.
 
 
-Some conclusions and next steps.....
+# Conclusions and next steps
+
+Once we get the additional data, we will quickly run through the analysis and share the results with the sponsor.  This preliminary analysis has uncovered a number of interesting questions that can only be answered with a larger data set.  We also expect to receive much larger data sets from National Center for Missing and Exploited Children, NCMEC, which will need to be processed and determine if similar modeling is applicable.  With all data in hand, we will re-evalute our choice of target variable and model techniques in conversations with our sponsor and stakeholders.
