@@ -1,4 +1,4 @@
 abduction2
 ==========
 
-for assignment 7
+Capstone project files
