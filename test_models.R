@@ -5,6 +5,9 @@ library(performanceEstimation)
 library(randomForest)
 library(rpart)
 library(plyr)
+library(corrplot)
+library(ggmap)
+library(gridExtra)
 
 # Data Understanding/Preparation
 # Using the existing data set, we will
@@ -25,6 +28,11 @@ names.data <- c("Date","Victim.Age","Victim.Race","Victim.Gender","Harm","Public
 colnames(data.raw) <- names.data
 summary(data.raw)
 
+# Remove all carriage returns
+for (i in 1:length(data))
+{
+  if (class(data[,i]) == "factor") levels(data[,i]) <- gsub("\n","", levels(data[,i]))
+}
 
 # missingData -------------------------------------------------------------
 ## Evaluate missing data and determine best method to handle
@@ -81,19 +89,48 @@ table(data$Relate.Group)
 harm.list <- as.data.frame(unique(unlist(data$Harm), use.names=FALSE))
 colnames(harm.list) <- c("Harm")
 harm.list$target <- c(0,1,1,1,0,1)
-harm.list$target2 <- c("NoThreat","Threat","Threat","Threat","NoThreat","Threat")
 data <- merge(data, harm.list, by = "Harm")
 table(data$target)
 
 
 # investigateData ---------------------------------------------------------
-#### INVESTIGATE DATA HERE
+# Correlations - factors converted to numeric
+cor.data <- data[,c(4:7,11:14,9,19,20)]
+for (i in 1:length(cor.data))
+{
+  cor.data[,i] <- as.numeric(cor.data[,i])
+}
+c <- cor(cor.data)
+corrplot(c)
 
+# detailed bar charts of interesting correlations
+p1 <- ggplot(data, aes(x=Rural.City, fill=Victim.Gender)) + geom_bar(stat='bin') + ggtitle("Victim Gender and Rural/City")
+p2 <- ggplot(data, aes(x=Offender.Race, fill=Victim.Race)) + geom_bar(stat='bin') + ggtitle("Victim and Offender Race")
+p3 <- ggplot(data, aes(x=Offender.Age, fill=Publicized)) + geom_bar(stat='bin') + ggtitle("Offender Age and Publicized")
+p4 <- ggplot(data, aes(x=Relate.Group, fill=Offender.Gender)) + geom_bar(stat='bin') + ggtitle("Relationship and Offender Gender")
+grid.arrange(p1,p2,p3,p4,ncol=2)
 
+#Factors with insuffiencient representative data
+p1 <- ggplot(data, aes(x=Recovery, fill=Recovery)) + geom_bar(stat="bin")
+p2 <- ggplot(data, aes(x=RSO, fill=RSO)) + geom_bar(stat="bin")
+grid.arrange(p1,p2,ncol=2)
 
 # geographicPlot ----------------------------------------------------------
-####  PLOT DATA GEOGRAPHICALLY
+library(ggmap)
+loc <- data.frame()
+all_locs <- paste0(as.character(data$Location),", US")
+unique_locs <- unique(all_locs)
+for (i in 1:length(unique_locs))
+{
+  geo.res <- geocode(unique_locs[i], messaging = FALSE)
+  loc[i,1] <- geo.res[1]
+  loc[i,2] <- geo.res[2]
+  loc[i,3] <- length(all_locs[all_locs==unique_locs[i]])
+}
 
+map <- get_map("united states", zoom = 4)
+ggmap(map, extent="device") + geom_point(aes(x=lon, y=lat), 
+              data=loc, color="darkred", size=3+3*loc$V3)
 
 
 # distributionsPlot -------------------------------------------------------
@@ -120,7 +157,7 @@ ggplot(data, aes(x=Offender.Age)) + geom_histogram(binwidth=.5, colour="black", 
 ggplot(data, aes(x=Harm, fill=Victim.Gender)) + geom_histogram(binwidth=.5, position="dodge")
 
 #Interesting for the most part children are recovered, girls are the only missing in our data
-ggplot(data, aes(x=Recovery, fill=Victim.Gender)) + geom_histogram(binwidth=.5, position="dodge")
+ggplot(data, aes(x=target, fill=Victim.Gender)) + geom_histogram(binwidth=.5, position="dodge")
 
 #The majority of cases are pubicized with the highest being in the South Central Region
 ggplot(data, aes(x=Publicized, fill=Region)) + geom_histogram(binwidth=.5, position="dodge")
@@ -154,14 +191,14 @@ ggplot(data, aes(x=Region, fill=Victim.Race)) + geom_histogram(binwidth=.5, posi
 # modelBuildAndEvaluate --------------------------------------------------------------
 
 # Remove extra attributes and those not known at the time of abduction
-data.m <- data[,-which(names(data) %in% c("RSO", "Harm","Date","Victim.Age","Offender.Age", "Relationship", "Location", "Recovery","Number.Victims","target2"))]
+data.m <- data[,-which(names(data) %in% c("Publicized", "RSO", "Harm","Date","Victim.Age","Offender.Age", "Relationship", "Location", "Recovery","Number.Victims"))]
 
 # In SMOTE, target must be factor and last item in dataframe
 data.m$target <- as.factor(data.m$target)
 data.smote <- SMOTE(target ~ ., data.m, perc.over = 500)
-table(data.smote$target)
 data.smote2 <- SMOTE(target ~ ., data.m, perc.over = 500, perc.under = 150)
-table(data.smote2$target)
+smote.output <- as.data.frame(rbind(table(data.m$target),table(data.smote$target),table(data.smote2$target)))
+rownames(smote.output) <- c("original data","upsampling","upsampling/downsampling")
 
 # rpart requires non factored target
 data.m.nf <- data.m
@@ -188,7 +225,7 @@ res <- performanceEstimation(
 res.nf <- performanceEstimation(
   c(PredTask(target ~ ., data.m.nf),PredTask(target ~ ., data.smote.nf),
     PredTask(target ~ ., data.smote2.nf)),
-  Workflow("standardWF", learner = "rpartXse", learner.pars=list(se=c(0,0.5,1))),
+  workflowVariants("standardWF", learner = "rpartXse", learner.pars=list(se=c(0,0.5,1))),
   BootSettings(type=".632", nReps=200))
 
 #Show results
@@ -199,8 +236,8 @@ plot(res.nf)
 topPerformers(res)
 topPerformers(res.nf)
 
-# Generally randomForest.v2 has lowest error
-getWorkflow("randomForest.v6", res)
+# Generally svm, randomForest, or naiveBayes has lowest error
+getWorkflow("svm.v6", res)
 
 # modelFinalBuild -----------------------------------------------------------
 
