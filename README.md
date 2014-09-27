@@ -1,4 +1,6 @@
 abduction2
 ==========
 
-for assignment 7
+Assignment 7 for Data Mining in R
+
+Capstone project files
