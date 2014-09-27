@@ -9,8 +9,7 @@ library(corrplot)
 library(ggmap)
 library(gridExtra)
 
-data.raw <- read.csv("D:/0 Stern MSBA/0.2 Capstone/DS0001/data_final.csv", 
-                       header=FALSE, na.strings=c("NA"))
+data.raw <- read.csv("data_final.csv", header=FALSE, na.strings=c("NA"))
 
 names.data <- c('STATE', 'ORI', 'INCNUM', 'INCDATE', 'B1006', 
                     'B1007', 'B1009', 'B1010', 'B1011', 'B2005', 'B2006', 
@@ -27,16 +26,17 @@ colnames(data.raw) <- names.data
 
 
 # Filter for all victims age <= 15 and Family Relationship (NIBRS definition)
-data <- data.raw
-m <- data[,c("V40181","V40182","V40183")]
-data$agemax <- apply(m,1,max,na.rm=TRUE)
+data1 <- data.raw
+m <- data1[,c("V40181","V40182","V40183")]
+data1$agemax <- apply(m,1,max,na.rm=TRUE)
   
-data.c <- subset(data, agemax <= 15 & V50071 >= 21 & V40321 %in% c(5,7,10,12,14,15,16,17,19), na.rm=TRUE)
+data.c <- subset(data1, agemax <= 15 & V20071 == 1 & V50071 >= 21 & V40321 %in% c(5,7,10,12,14,15,16,17,19), na.rm=TRUE)
 table(data.c$V40181)
 table(data.c$V40321)
 
 # Set up target variable
-data.c$target <- ifelse((data.c$V40261>1 | (data.c$V20171>0 & data.c$V20171<400) | (data.c$V20062>0 & data.c$V20062<110)), 1, 0)
+# Currently includes sexually related incidents
+data.c$target <- ifelse((data.c$V40261>1 | (data.c$V20171>0 & data.c$V20171<400) | (data.c$V20062>0 & data.c$V20062<1100)), 1, 0)
 sum(data.c$target)
 
 
@@ -57,9 +57,9 @@ x
 
 # Add in groupings
 data$VNumVG <- as.factor(ifelse(!is.na(data$V40182), "Multiple Victims", "Single Victim"))
-data$VNumOG <- as.factor(ifelse(!is.na(data$V40331), "Multiple Victims", "Single Victim"))
+data$VNumOG <- as.factor(ifelse(!is.na(data$V40331), "Multiple Offenders", "Single Offender"))
 
-data.t <- data[,-which(names(data) %in% x[1:31,1])]
+data.t <- data[,-which(names(data) %in% x[1:32,1])]
 
 data.t$V20111G <- as.factor(ifelse(data.t$V20111 == 20, "Home", ifelse((data.t$V20111 == 44 | data.t$V20111 == 53 | data.t$V20111 == 57), "School","Other")))
 
@@ -100,12 +100,9 @@ data.t <- centralImputation(data.t)
 check <- nrow(data[!complete.cases(data.t),])
 
 
-library(corrplot)
-
-#data.m <- data.c[,c("V40181","V40191","V40201","B1011","V50071","V50081","V50091","V40261","V20171", "V20062")]
 # Correlations - factors converted to numeric
 cor.data <- data.t[,c("V40181G","V40191","V40201","V50071G","V50081","V50091","B1010", 
-                    "B2005G","V1007G","V20071", "V20111G", "V40321G", "VNumVG","VNumOG","target")]
+                    "B2005G","V1007G", "V20111G", "V40321G", "VNumVG","VNumOG","target")]
 for (i in 1:length(cor.data))
 {
   cor.data[,i] <- as.numeric(cor.data[,i])
@@ -115,10 +112,10 @@ corrplot(c)
 
 colnames(data.t)
 data.m <- data.t[,c("V40181G","V40191","V40201","V50071G","V50081","V50091","B1010", 
-                    "B2005G","V1007G","V20071", "V20111G", "V40321G", "VNumVG","VNumOG","target")]
+                    "B2005G","V1007G","V20111G", "V40321G", "VNumVG","VNumOG","target")]
 data.m$target <- as.factor(data.m$target)
 data.m$B1010 <- as.factor(data.m$B1010)
-data.m$V20071 <- as.factor(data.m$V20071)
+#data.m$V20071 <- as.factor(data.m$V20071)
 data.m$V40191 <- as.factor(data.m$V40191)
 data.m$V40201 <- as.factor(data.m$V40201)
 data.m$V50081 <- as.factor(data.m$V50081)
@@ -130,14 +127,6 @@ data.smote2 <- SMOTE(target ~ ., data.m, perc.over = 500)
 smote.output <- as.data.frame(rbind(table(data.m$target),table(data.smote$target),table(data.smote2$target)))
 rownames(smote.output) <- c("original data","upsampling","upsampling/downsampling")
 smote.output
-
-# rpart requires non factored target
-data.m.nf <- data.m
-data.m.nf$target <- as.numeric(data.m.nf$target)
-data.smote.nf <- data.smote
-data.smote.nf$target <- as.numeric(data.smote.nf$target)
-data.smote2.nf <- data.smote2
-data.smote2.nf$target <- as.numeric(data.smote2.nf$target)
 
 
 
@@ -162,7 +151,9 @@ res <- performanceEstimation(
     workflowVariants("standardWF", learner = "randomForest",
                      learner.pars=list(ntree = c(5,50,200), nodesize = c(2,5)), 
                      evaluator.pars=list(stats=c("rec","prec", "F"))),
-    workflowVariants("standardWF", learner = "naiveBayes", evaluator.pars=list(stats=c("rec","prec","F")))),
+    workflowVariants("standardWF", learner = "naiveBayes", evaluator.pars=list(stats=c("rec","prec","F")))
+    workflowVariants("standardWF", learner = "ada", learner.pars=list(iter=c(10,50)), 
+                     evaluator.pars=list(stats=c("rec","prec", "F")))),
   CvSettings(nReps =1, nFolds = 10))
 
 plot(res)
@@ -186,20 +177,19 @@ res.ada <- performanceEstimation(
   workflowVariants("standardWF", learner = "ada", learner.pars=list(iter=c(10,50)), 
                    evaluator.pars=list(stats=c("rec","prec", "F"))),
   CvSettings(nReps =1, nFolds = 10))
-
-
-HldSettings(nReps = 5, hldSz=0.25))
-
 plot(res.ada)
 
 
 # Some test models
+
+# Rpart test
 model.tree <- rpart(target ~ ., data=data.smote, method="class", control = rpart.control(minsplit = 50, minbucket = 10))
 pred.tree <- predict(model.tree, data.m, type="class")
 prettyTree(model.tree, cex=0.75, margin=0.05, compress=TRUE, fheight=1)
 printcp(model.tree)
 classificationMetrics(data.m$target,pred.tree,stats=c("rec","prec","F"))
 
+# Adaboost test
 idx <- sample(1:nrow(data.smote2), as.integer(0.75*nrow(data.smote2)))
 train <- data.smote2[idx,]
 test <- data.smote2[-idx,]
@@ -208,3 +198,21 @@ model.ada <- boosting(target ~ ., data=data.smote, mfinal=10)
 pred.ada <- predict(model.ada, data.m)
 classificationMetrics(data.m$target,pred.ada$class,stats=c("rec","prec","F"))
 pred.ada$confusion
+
+model.svm <- svm(target ~ ., data=data.smote, cost=10, gamma=0.1)
+pred.svm <- predict(model.svm, data.smote)
+classificationMetrics(data.smote$target,pred.svm,stats=c("rec","prec","F"))
+table(data.smote$target,pred.svm)
+
+model.nb <- naiveBayes(target ~ ., data.smote)
+pred.nb <- predict(model.nb, data.smote)
+table(data.smote$target, pred.nb)
+
+model.tree <- rpart(target ~ ., data=data.smote, method="class", control = rpart.control(minsplit = 20, minbucket = 10))
+pred.tree <- predict(model.tree, data.smote, type="class")
+prettyTree(model.tree, cex=0.75, margin=0.05, compress=TRUE, fheight=1)
+printcp(model.tree)
+classificationMetrics(data.smote$target,pred.tree,stats=c("rec","prec","F"))
+table(data.smote$target,pred.tree)
+
+

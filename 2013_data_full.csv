@@ -7,34 +7,38 @@ Location","Recovery
 Location",Victim Recovery Status,Motive
 1,Black,Male,Father,,Albany,Northeast,No,27,Black,Male,Rural,Home,,Deceased,False Allegation
 ,,,,,,,,,,,,,,,
-12,White,Female,Unknown,,Buffalo,Northeast,No,20,Black,Male,Rural,School,"More than
-25 miles",Alive,Unknown
-1,Black,Male,Neighbor,,Birmingham,Southeast,No,14,Black,Female,City,Home,,Alive,Intent to Keep/Infant
+12,White,Female,Unknown,,Buffalo,Northeast,No,20,Black,Male,Rural,School,">10 miles
+from Missing Location",Alive,Unknown
+1,Black,Male,Neighbor,,Birmingham,SouthEast,No,14,Black,Female,City,Home,,Alive,Intent to Keep/Infant
 ,,,Stranger,,,,No,15,Black,Female,,,,,
 8,Black,Female,"Father's
-Girlfriend",No,Birmingham,Southeast,No,35,Black,Female,Rural,,"More than
-10 miles from",Alive,Custodial
-15,White,Male,Runaway,,Boston,Southeast,,,None,,Rural,,,Alive,Runaway
-15,White,Male,Ex Boyfriend,,Boston,Southeast,,20,White,Male,Rural,Home,,Deceased,Runaway
+Girlfriend",No,Birmingham,SouthEast,No,35,Black,Female,Rural,,">10 miles
+from Missing Location",Alive,Custodial
+15,White,Male,Runaway,,Boston,SouthEast,,,None,,Rural,,,Alive,Runaway
+15,White,Male,Ex Boyfriend,,Boston,SouthEast,,20,White,Male,Rural,Home,,Deceased,Runaway
 2,"Hispani
-c",Male,Stranger,,Boston,Southeast,,28,"Hispani
+c",Male,Stranger,,Boston,SouthEast,,28,"Hispani
 c",Male,Rural,Home,,Alive,Unknown
-16,White,Female,Unknown,,Charlotte,Southeast,,U,"Unkno
+16,White,Female,Unknown,,Charlotte,SouthEast,,U,"Unkno
 wn","Unknow
 n",Rural,,,Deceased,Unknown
-13,White,Female,Acquaintance,,Charlotte,Southeast,,20,"Unkno
+13,White,Female,Acquaintance,,Charlotte,SouthEast,,20,"Unkno
 wn",Male,City,,,Alive,Unknown
-15,White,Female,Unknown,,Charlotte,Southeast,,U,Unkno,Unknow,,,,Missing,Unknown
-1,Black,Female,Stranger,,Charlotte,Southeast,,U,Unkno,Unknow,Rural,,,Alive,Unknown
-14,White,Female,Unknown,,Charlotte,Southeast,,U,"Hispani
+15,White,Female,Unknown,,Charlotte,SouthEast,,U,"Unkno
+wn","Unknow
+n",,,,Missing,Unknown
+1,Black,Female,Stranger,,Charlotte,SouthEast,,U,"Unkno
+wn","Unknow
+n",Rural,,,Alive,Unknown
+14,White,Female,Unknown,,Charlotte,SouthEast,,U,"Hispani
 c",Female,Rural,"School Bus
 Stop",,Missing,Runaway
 15,White,Female,"Paternal
 Grandmother",No,Cincinnati,Central,No,U,"Unkno
 wn",Male,,,,Missing,Custodial
 5,White,Male,Father,"No;
-Threatened harm; High speed chase",Columbia,Southeast,No,37,White,Male,Rural,Home,"More
-than10 miles from Missing Location",Alive,Custodial
+Threatened harm; High speed chase",Columbia,SouthEast,No,37,White,Male,Rural,Home,">10 miles
+from Missing Location",Alive,Custodial
 2,White,Female,,,,,,,,,,,,,
 3,Black,Male,Mother,,Cleveland,Central,No,20,Black,Female,City,,">10 miles
 from Missing Location",Deceased,False Allegation
@@ -49,34 +53,33 @@ n",Rural,Home,,Alive,Runaway
 17,White,Male,Brother,,,,,,,,,,,Deceased,
 12,Black,Male,Mother,No,Cleveland,Central,No,45,Black,Female,City,Home,,Alive,Custodial
 1,White,Female,Stranger,,Cleveland,Central,,24,White,Male,Rural,,,Deceased,False Allegation
-8,White,Male,Father,No,Cleveland,Central,No,36,White,Male,CIty,,,Alive,Custodial
+8,White,Male,Father,No,Cleveland,Central,No,36,White,Male,City,,,Alive,Custodial
 14,White,Male,Runaway,,Cleveland,Central,,,,,Rural,,,Alive,Runaway
 4,White,Male,"Mother's
 Boyfriend",,Detroit,Central,,37,White,Male,Rural,,,Alive,None
 5,White,Male,,,,,,,,,,,,Alive,
-1,Other,Male,Family Friend,,Detroit,Central,No,62,Black,Male,City,,"Recovered
-more than
-10 miles from Missing location",Alive,Unknown
+1,Other,Male,Family Friend,,Detroit,Central,No,62,Black,Male,City,,">10 miles
+from Missing Location",Alive,Unknown
 3,Black,Male,Mother's Friend,,Detroit,Central,,27,Black,Female,City,,,Alive,Intent to Keep/Infant
 4,White,Male,Father,"No; Father
 murdered
 Mother",Dallas,"South
-Central",No,42,White,Male,City,Home,"More than
-10 miles from missing location.",Alive,Custodial
+Central",No,42,White,Male,City,Home,">10 miles
+from Missing Location",Alive,Custodial
 2,"Hispani
 c",Female,Family Friend,,Dallas,"South
 Central",No,42,White,Female,City,,,Deceased,False Allegation
 12,Black,Female,Mother,No,Dallas,"South
-Central",No,43,Black,Female,Rural,,"More than
-10 miles from missing location",Alive,Custodial
+Central",No,43,Black,Female,Rural,,">10 miles
+from Missing Location",Alive,Custodial
 U,"Unkno
 wn",Male,Stranger,,Dallas,"South
-Central",Yes,U,Black,Male,City,Home,"Less than
-5 miles",Alive,Sexual
-10,White,Female,Stranger,,Denver,West,No,17,White,Male,Rural,Street,"Less than 5
-miles",Deceased,Sexual
-11,White,Female,Stranger,,Denver,West,,39,White,Male,Rural,,"More than
-10 miles from missing location",Alive,Sexual
+Central",Yes,U,Black,Male,City,Home,"1-10 miles
+from missing location",Alive,Sexual
+10,White,Female,Stranger,,Denver,West,No,17,White,Male,Rural,Street,"1-10 miles
+from missing location",Deceased,Sexual
+11,White,Female,Stranger,,Denver,West,,39,White,Male,Rural,,">10 miles
+from Missing Location",Alive,Sexual
 ,,,,,,,,,,,,,,Alive,
 6,White,Female,Grandmother,No,El Paso,"South
 Central",,47,White,Female,City,,"1-10 miles
@@ -87,42 +90,43 @@ Central",No,19,"Hispani
 c",Male,Rural,,">10 miles
 from Missing Location",Alive,Sexual
 14,White,Female,Neighbor,,Houston,"South
-Central",No,33,White,Male,Rural,Home,"More than
-10 miles from",Alive,Sexual
+Central",No,33,White,Male,Rural,Home,">10 miles
+from Missing Location",Alive,Sexual
 1,Black,Male,Father,"No;
 Abducted at gunpoint",Houston,"South
-Central",No,26,Black,Male,City,Home,"More than
-10 miles from",Alive,Custodial
+Central",No,26,Black,Male,City,Home,">10 miles
+from Missing Location",Alive,Custodial
 5,White,Female,Father,,Houston,"South
-Central",No,31,White,Male,Rural,,"More than
-10 miles from missing location",Alive,
-15,White,Male,Acquaintance,,Houston,South,Yes,19,Hispani,Male,Rural,,,Missing,Unknown
-8,White,Female,Friend of Mom,,Jacksonville,Southeast,Yes,56,White,Male,City,Store,,Alive,Sexual
-6,White,Female,Father,No,Jacksonville,Souheast,"Unkn
+Central",No,31,White,Male,Rural,,">10 miles
+from Missing Location",Alive,
+15,White,Male,Acquaintance,,Houston,South,Yes,19,"Hispani
+c",Male,Rural,,,Missing,Unknown
+8,White,Female,Friend of Mom,,Jacksonville,SouthEast,Yes,56,White,Male,City,Store,,Alive,Sexual
+6,White,Female,Father,No,Jacksonville,SouthEast,"Unkn
 own",45,White,Male,Rural,,,Alive,Custodial
 11,White,Female,,,,,,,,,,,,Alive,
 5,White,Female,Mother's Friend,No,Kansas City,Central,No,35,White,Female,City,,"1-10 miles
 from missing location",Alive,Custodial
 1,White,Female,Unknown,,Kansas City,Central,"Unkn
-own",27,White,Male,Rural,,"More than
-10 miles from missing location",Deceased,Unknown
+own",27,White,Male,Rural,,">10 miles
+from Missing Location",Deceased,Unknown
 12,White,Female,"Family
 Acquaintance",,Kansas City,Central,,34,White,Male,Rural,Park,,Deceased,Sexual
 3,"Hispani
 c",Female,"Mother's
 Boyfriend",No,Los Angeles,West,,26,"Hispani
 c",Male,Rural,,,Alive,Custodial
-10,White,Female,Stranger,,Los Angeles,West,,30,White,Male,Rural,Home,"1-10miles
+10,White,Female,Stranger,,Los Angeles,West,,30,White,Male,Rural,Home,"1-10 miles
 from missing location",Alive,Sexual
 17,White,Female,Unidentified,,Los Angeles,West,,15,White,Male,City,,,Deceased,False Allegation
 14,"Hispani
 c",Female,Unknown,,Los Angeles,West,,34,"Hispani
 c",Male,City,,,Missing,Unknown
-9,Black,Male,Unknown,,Los Angeles,West,No,47,Black,Female,City,,"More than
-10 miles from missing location",Alive,Intent to Keep/Infant
-6,White,Female,Babysitter,,Litte Rock,Southeast,No,28,White,Male,City,,"Less than a
+9,Black,Male,Unknown,,Los Angeles,West,No,47,Black,Female,City,,">10 miles
+from Missing Location",Alive,Intent to Keep/Infant
+6,White,Female,Babysitter,,Litte Rock,SouthEast,No,28,White,Male,City,,"Less than a
 mile from missing location",Deceased,Sexual
-11,Black,Female,N/A,,Miami,Souheast,"Unkn
+11,Black,Female,N/A,,Miami,SouthEast,"Unkn
 own",28,"Hispani
 c",Female,City,Street,"Less than a
 mile from missing location",Alive,Sexual
@@ -134,8 +138,8 @@ mile from missing location",Deceased,None
 2,Black,Male,"Family
 Acquaintance",No,"New
 Orleans","South
-Central",,51,Black,Female,City,,"More than
-10 miles from missing location",Alive,Custodial
+Central",,51,Black,Female,City,,">10 miles
+from Missing Location",Alive,Custodial
 7,Black,Female,Stranger,,"New
 Orleans","South
 Central",,29,"Hispani
@@ -143,14 +147,14 @@ c",Male,Rural,,"1-10 miles
 from missing location",Alive,Sexual
 6,Black,Female,Unknown,,"New
 Orleans","South
-Central",,"Unkno
-wn","Unkno
+Central",,U,"Unkno
 wn","Unknow
 n",City,,,Missing,Sexual
-2,White,Female,Father,No,Oklahoma,South,No,40,Unkno,Male,Rural,,,Alive,Custodial
+2,White,Female,Father,No,Oklahoma,South,No,40,"Unkno
+wn",Male,Rural,,,Alive,Custodial
 6,Black,Female,Mother,No,Portland,West,No,30,Black,Female,Rural,,,Alive,Custodial
-13,White,Female,,,Pittsburgh,Northeast,,32,White,Male,Rural,,"More than
-10 miles from missing location",Alive,Sexual
+13,White,Female,,,Pittsburgh,Northeast,,32,White,Male,Rural,,">10 miles
+from Missing Location",Alive,Sexual
 14,White,Female,Acquaintance,,Pittsburgh,Northeast,No,22,White,Male,City,,"Less than a
 mile from missing location",Alive,Sexual
 5,Black,Female,Stranger,,Philadelphia,Northeast,No,U,Black,Female,City,School,,Alive,Sexual
@@ -158,19 +162,20 @@ mile from missing location",Alive,Sexual
 c",Male,"Associates of
 Father",,Phoenix,West,No,31,"Hispani
 c",Female,City,Hotel,,Alive,Ransom
-,,,,,,,,38,Hispani,Female,,,,,
-7,White,Male,Unknown,,Phoenix,West,N/A,"Unava
-ilable","Unkno
+,,,,,,,,38,"Hispani
+c",Female,,,,,
+7,White,Male,Unknown,,Phoenix,West,N/A,U,"Unkno
 wn","Unknow
 n",Rural,Home,"1-10 miles
 from missing location",Alive,None
 13,Black,Female,Father,"No; Father
 suffered from mental",Phoenix,West,No,37,Black,Male,Rural,Bus Stop,,Alive,Custodial
-16,White,Female,No offender,,Phoenix,West,,None,None,None,City,,,Alive,Runaway
-17,Black,Female,No offender,,Richmond,Southeast,,None,None,None,Rural,,,Alive,Runaway
-12,Black,Male,No offender,,Richmond,Souheast,,None,None,None,City,,,Deceased,None
-16,Black,Female,Stranger,,Richmond,Southeast,No,48,White,Male,Rural,Gas Station,,Missing,Sexual
-13,White,Female,Uncle,No,San Antonio,South,Unkn,33,White,Male,Rural,Home,,Alive,Custodial
+16,White,Female,No offender,,Phoenix,West,,U,None,None,City,,,Alive,Runaway
+17,Black,Female,No offender,,Richmond,SouthEast,,U,None,None,Rural,,,Alive,Runaway
+12,Black,Male,No offender,,Richmond,SouthEast,,U,None,None,City,,,Deceased,None
+16,Black,Female,Stranger,,Richmond,SouthEast,No,48,White,Male,Rural,Gas Station,,Missing,Sexual
+13,White,Female,Uncle,No,San Antonio,South,"Unkn
+own",33,White,Male,Rural,Home,,Alive,Custodial
 14,White,Female,,,,,,,,,,,,Alive,
 13,White,Female,Unknown,,Sacramento,West,"Unkn
 own",U,Black,Male,Rural,Street,,Deceased,Sexual
@@ -193,7 +198,7 @@ wn","Unkno
 wn","Unknow
 n",City,,,Missing,False Allegation
 6,"Hispani
-c",Male,Stranger,,San Juan,Southeast,No,U,"Hispani
+c",Male,Stranger,,San Juan,SouthEast,No,U,"Hispani
 c",Male,City,Vehicle,,Missing,Ransom
 ,,,,,,,,U,"Hispani
 c",Male,,,,,
@@ -201,9 +206,9 @@ c",Male,,,,,
 2,White,Male,"Father and
 Mother","No; Took
 children to Cuba. Broke into
-custodial",Tampa,Southeast,No,34,White,Female,City,Home,"More than
-10 miles from missing location",Alive,Custodial
+custodial",Tampa,SouthEast,No,34,White,Female,City,Home,">10 miles
+from Missing Location",Alive,Custodial
 4,White,Male,,,,,,34,White,Male,,,,Alive,
-14,White,Male,None,,Tampa,Southeast,,,,None,City,,,Alive,Runaway
-15,White,Female,,,Tampa,Southeast,,22,White,Male,City,,,Alive,Sexual
+14,White,Male,None,,Tampa,SouthEast,,,,None,City,,,Alive,Runaway
+15,White,Female,,,Tampa,SouthEast,,22,White,Male,City,,,Alive,Sexual
 14,White,Female,,,,,,,,,,,,Alive,
